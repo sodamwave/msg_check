@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>컴퓨터 상태 모니터링</title>
+    <style>
+        /* CSS 스타일은 그대로 둡니다. */
+        body { font-family: 'Malgun Gothic', sans-serif; background-color: #f4f7f9; margin: 0; padding: 20px; }
+        h1 { text-align: center; color: #333; }
+        #status-container { display: flex; flex-wrap: wrap; gap: 20px; justify-content: center; }
+        .status-card { background-color: white; border-radius: 8px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); padding: 20px; width: 350px; border-left: 5px solid #ccc; transition: all 0.3s ease; }
+        .status-card .uuid { font-weight: bold; font-size: 1.1em; color: #555; word-break: break-all; }
+        .status-card .info { margin-top: 10px; font-size: 0.9em; color: #777; }
+        .status-card .status { font-weight: bold; }
+        .status-card.start { border-left-color: #28a745; }
+        .status-card.start .status { color: #28a745; }
+        .status-card.end { border-left-color: #dc3545; }
+        .status-card.end .status { color: #dc3545; }
+    </style>
+</head>
+<body>
+
+    <h1>컴퓨터 상태 실시간 모니터링</h1>
+    <div id="status-container">
+        <!-- JavaScript가 여기에 상태 카드를 동적으로 추가합니다. -->
+    </div>
+
+    <script>
+        // ================================================================
+        // ★★★ 이 부분을 상대 경로로 수정합니다 ★★★
+        // ================================================================
+        // 이제 웹페이지와 API가 같은 주소에서 제공되므로, 전체 URL을 쓸 필요가 없습니다.
+        const apiUrl = '/status';
+
+        const statusContainer = document.getElementById('status-container');
+
+        // 이 아래 JavaScript 코드는 그대로 둡니다.
+        async function fetchStatus() {
+            try {
+                const response = await fetch(apiUrl);
+                if (!response.ok) throw new Error(`서버 응답 오류: ${response.status}`);
+                const data = await response.json();
+                statusContainer.innerHTML = '';
+                Object.entries(data).forEach(([uuid, info]) => {
+                    const card = document.createElement('div');
+                    card.classList.add('status-card');
+                    if (info.status === '시작') card.classList.add('start');
+                    else if (info.status === '종료') card.classList.add('end');
+                    card.innerHTML = `
+                        <div class="uuid">${uuid}</div>
+                        <div class="info">상태: <span class="status">${info.status}</span></div>
+                        <div class="info">마지막 업데이트: ${new Date(info.last_update).toLocaleString('ko-KR')}</div>
+                    `;
+                    statusContainer.appendChild(card);
+                });
+            } catch (error) {
+                console.error('상태를 가져오는 데 실패했습니다:', error);
+                statusContainer.innerHTML = `<p style="color: red;">데이터를 불러오는 데 실패했습니다. 서버 상태를 확인해주세요.</p>`;
+            }
+        }
+
+        setInterval(fetchStatus, 5000);
+        fetchStatus();
+    </script>
+
+</body>
+</html>
