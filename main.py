@@ -6,6 +6,7 @@ import threading
 from flask import Flask, jsonify, render_template
 from datetime import datetime, timezone, timedelta
 
+
 # -------------------------------------
 # 설정 (이 부분은 그대로 둡니다)
 # -------------------------------------
@@ -96,3 +97,4 @@ if __name__ == '__main__':
         flask_thread.daemon = True
         flask_thread.start()
         client.run(DISCORD_TOKEN)
+
