@@ -5,14 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>컴퓨터 상태 모니터링</title>
     <style>
-        /* CSS 스타일은 그대로 둡니다. */
+        /* CSS는 변경 없음 */
         body { font-family: 'Malgun Gothic', sans-serif; background-color: #f4f7f9; margin: 0; padding: 20px; }
         h1 { text-align: center; color: #333; }
         #status-container { display: flex; flex-wrap: wrap; gap: 20px; justify-content: center; }
         .status-card { background-color: white; border-radius: 8px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); padding: 20px; width: 350px; border-left: 5px solid #ccc; transition: all 0.3s ease; }
         .status-card .uuid { font-weight: bold; font-size: 1.1em; color: #555; word-break: break-all; }
         .status-card .info { margin-top: 10px; font-size: 0.9em; color: #777; }
-        .status-card .status { font-weight: bold; }
+        .status-card .status, .status-card .time { font-weight: bold; } /* time 스타일 추가 */
         .status-card.start { border-left-color: #28a745; }
         .status-card.start .status { color: #28a745; }
         .status-card.end { border-left-color: #dc3545; }
@@ -27,30 +27,42 @@
     </div>
 
     <script>
-        // ================================================================
-        // ★★★ 이 부분을 상대 경로로 수정합니다 ★★★
-        // ================================================================
-        // 이제 웹페이지와 API가 같은 주소에서 제공되므로, 전체 URL을 쓸 필요가 없습니다.
         const apiUrl = '/status';
-
         const statusContainer = document.getElementById('status-container');
 
-        // 이 아래 JavaScript 코드는 그대로 둡니다.
         async function fetchStatus() {
             try {
                 const response = await fetch(apiUrl);
                 if (!response.ok) throw new Error(`서버 응답 오류: ${response.status}`);
                 const data = await response.json();
                 statusContainer.innerHTML = '';
-                Object.entries(data).forEach(([uuid, info]) => {
+                
+                // ★★★ 데이터를 event_time (로그 시간) 기준으로 최신순 정렬 ★★★
+                const sortedData = Object.entries(data).sort(([, a], [, b]) => {
+                    // event_time이 없을 경우를 대비하여 기본값 설정
+                    const timeA = a.event_time || '00:00:00';
+                    const timeB = b.event_time || '00:00:00';
+                    return timeB.localeCompare(timeA);
+                });
+
+                sortedData.forEach(([uuid, info]) => {
                     const card = document.createElement('div');
                     card.classList.add('status-card');
                     if (info.status === '시작') card.classList.add('start');
                     else if (info.status === '종료') card.classList.add('end');
+                    
+                    // ★★★ 카드에 표시될 HTML 내용 수정 ★★★
                     card.innerHTML = `
                         <div class="uuid">${uuid}</div>
-                        <div class="info">상태: <span class="status">${info.status}</span></div>
-                        <div class="info">마지막 업데이트: ${new Date(info.last_update).toLocaleString('ko-KR')}</div>
+                        <div class="info">
+                            상태: <span class="status">${info.status}</span>
+                        </div>
+                        <div class="info">
+                            로그 시간: <span class="time">${info.event_time || 'N/A'}</span>
+                        </div>
+                        <div class="info">
+                            서버 확인 시간: ${new Date(info.last_update).toLocaleString('ko-KR')}
+                        </div>
                     `;
                     statusContainer.appendChild(card);
                 });
