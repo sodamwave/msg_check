@@ -5,16 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>컴퓨터 상태 모니터링</title>
     <style>
+        /* CSS는 이전과 동일 */
         body { font-family: 'Malgun Gothic', sans-serif; background-color: #f4f7f9; margin: 0; padding: 20px; }
         h1 { text-align: center; color: #333; }
-        /* ★★★ 버튼 컨테이너 스타일 추가 ★★★ */
         .sort-buttons { text-align: center; margin-bottom: 25px; }
-        .sort-buttons button {
-            background-color: #fff; border: 1px solid #ccc; border-radius: 5px;
-            padding: 8px 16px; margin: 0 5px; cursor: pointer;
-            font-size: 1em; transition: all 0.2s ease;
-        }
-        /* ★★★ 활성화된 버튼 스타일 추가 ★★★ */
+        .sort-buttons button { background-color: #fff; border: 1px solid #ccc; border-radius: 5px; padding: 8px 16px; margin: 0 5px; cursor: pointer; font-size: 1em; transition: all 0.2s ease; }
         .sort-buttons button.active { background-color: #007bff; color: white; border-color: #007bff; }
         #status-container { display: flex; flex-wrap: wrap; gap: 15px; justify-content: center; }
         .status-card { background-color: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); padding: 15px; width: 250px; border-left: 5px solid #ccc; transition: all 0.3s ease; }
@@ -33,7 +28,6 @@
 </head>
 <body>
     <h1>컴퓨터 상태 실시간 모니터링</h1>
-    <!-- ★★★ 정렬 버튼 HTML 추가 ★★★ -->
     <div class="sort-buttons">
         <button id="sort-by-number" class="active">순번 정렬</button>
         <button id="sort-by-status">상태 정렬</button>
@@ -45,12 +39,10 @@
         const statusContainer = document.getElementById('status-container');
         const sortButtons = document.querySelectorAll('.sort-buttons button');
         
-        let allStatuses = []; // 전체 데이터 저장용
-        let currentSort = 'number'; // 현재 정렬 상태 저장용
+        let allStatuses = [];
+        let currentSort = 'number';
 
-        // ★★★ 정렬 로직을 포함한 렌더링 함수 ★★★
         function renderStatuses() {
-            // 현재 정렬 기준에 따라 데이터 복사 및 정렬
             let sortedData = [...allStatuses];
 
             if (currentSort === 'number') {
@@ -67,12 +59,12 @@
                     return orderA - orderB;
                 });
             } else if (currentSort === 'time') {
+                // ★★★ 정렬 로직 변경: log_timestamp를 기준으로 최신순(내림차순) 정렬 ★★★
                 sortedData.sort(([, a], [, b]) => {
-                    return (b.event_time || '').localeCompare(a.event_time || '');
+                    return (b.log_timestamp || '').localeCompare(a.log_timestamp || '');
                 });
             }
 
-            // 화면 클리어 및 카드 렌더링
             statusContainer.innerHTML = '';
             sortedData.forEach(([name, info]) => {
                 const card = document.createElement('div');
@@ -82,42 +74,43 @@
                 else if (info.status === 'UUID 없음') card.classList.add('no-uuid');
                 else card.classList.add('unknown');
                 
+                // ★★★ 화면 표시 로직 변경: 전체 일시에서 시간 부분만 잘라서 표시 ★★★
+                const displayTime = info.log_timestamp.includes(' ') 
+                    ? info.log_timestamp.split(' ')[1] 
+                    : info.log_timestamp;
+
                 card.innerHTML = `
                     <div class="computer-name">${name}</div>
                     <div class="info">상태: <span class="status">${info.status}</span></div>
-                    <div class="info">로그 시간: <span class="time">${info.event_time}</span></div>
+                    <div class="info">로그 시간: <span class="time">${displayTime}</span></div>
                     <div class="info">서버 확인: ${new Date(info.last_update).toLocaleTimeString('ko-KR')}</div>
                 `;
                 statusContainer.appendChild(card);
             });
         }
         
-        // ★★★ 데이터 패치 함수 (렌더링과 분리) ★★★
         async function fetchStatus() {
             try {
                 const response = await fetch(apiUrl);
                 if (!response.ok) throw new Error(`서버 응답 오류: ${response.status}`);
                 const data = await response.json();
-                allStatuses = Object.entries(data); // 데이터 저장
-                renderStatuses(); // 저장된 데이터로 렌더링
+                allStatuses = Object.entries(data);
+                renderStatuses();
             } catch (error) {
                 console.error('상태 가져오기 실패:', error);
                 statusContainer.innerHTML = `<p style="color: red;">데이터를 불러오는 데 실패했습니다. 서버 상태를 확인해주세요.</p>`;
             }
         }
         
-        // ★★★ 버튼 클릭 이벤트 리스너 추가 ★★★
         sortButtons.forEach(button => {
             button.addEventListener('click', () => {
                 currentSort = button.id.replace('sort-by-', '');
-                // 활성 버튼 스타일 업데이트
                 sortButtons.forEach(btn => btn.classList.remove('active'));
                 button.classList.add('active');
-                renderStatuses(); // 정렬 기준 변경 후 즉시 다시 렌더링
+                renderStatuses();
             });
         });
 
-        // 주기적 업데이트 및 최초 실행
         setInterval(fetchStatus, 5000);
         fetchStatus();
     </script>
