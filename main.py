@@ -11,7 +11,6 @@ from datetime import datetime, timezone, timedelta
 DISCORD_TOKEN = os.environ.get('DISCORD_TOKEN')
 TARGET_CHANNEL_ID = int(os.environ.get('TARGET_CHANNEL_ID'))
 
-# ★★★ UUID와 순번 매핑 테이블 ★★★
 UUID_MAP = {
     "B6254D56-1931-8E9A-6F2C-C413BCA4F6CB": "1번 컴퓨터", "00F54D56-3471-F7DA-19A0-25962FD3EDD4": "2번 컴퓨터",
     "698A4D56-6628-2370-1786-F01F6FB8E011": "3번 컴퓨터", "758B4D56-184F-DCCE-BA13-5125C618E676": "4번 컴퓨터",
@@ -91,7 +90,7 @@ UUID_MAP = {
     "4DEB4D56-F2AB-001E-5CB1-EB00EF30AE65": "151번 컴퓨터", "F5A84D56-D091-19D7-A82A-9CCF8838869A": "152번 컴퓨터",
     "F7BB4D56-54B0-8B09-60D2-10EFF5C8C70B": "153번 컴퓨터", "70844D56-F7B9-F7D1-3161-2867F5D4A1FA": "154번 컴퓨터",
     "B4024D56-3E43-791B-D5EC-BDF3B3437AB1": "155번 컴퓨터", "44B64D56-FEA6-50AE-F4F2-FC1578D032C7": "156번 컴퓨터",
-    "": "UUID 없음", # UUID가 비어있는 경우
+    "": "UUID 없음",
     "3DD74D56-851D-62A9-66DC-8CDBFA63A48B": "181번 컴퓨터", "F1794D56-D9A5-771C-F58E-1DFEB8060DE0": "182번 컴퓨터",
     "74D54D56-E7BF-019E-161A-3DD403BF3E00": "183번 컴퓨터", "E5D74D56-0B34-75C4-3D71-A42DF9317DA4": "184번 컴퓨터",
     "15584D56-4824-AE41-64F3-42BC5DE9AE97": "185번 컴퓨터", "3C4A4D56-D110-8D0D-3477-D05E075B0006": "186번 컴퓨터",
@@ -126,14 +125,10 @@ computer_statuses = {}
 status_lock = threading.Lock()
 app = Flask(__name__)
 
-# ★★★ 프로그램 시작 시 모든 컴퓨터 목록을 미리 채워넣기 ★★★
 def initialize_statuses():
-    # UUID_MAP에 있는 모든 컴퓨터를 기본 상태로 추가
     for name in UUID_MAP.values():
         if name not in computer_statuses:
             computer_statuses[name] = { 'status': '알 수 없음', 'event_time': '-', 'last_update': datetime.now(timezone(timedelta(hours=9))).isoformat() }
-    
-    # 순번 리스트에 있지만 UUID가 없는 항목들 추가
     empty_uuid_numbers = [157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 170, 171, 172, 173, 174, 175, 176, 177, 178, 179, 180, 235, 236, 237, 238, 240]
     for num in empty_uuid_numbers:
         name = f"{num}번 컴퓨터"
@@ -150,8 +145,8 @@ def parse_and_update_status(message_content):
     uuid_match = UUID_PATTERN.search(message_content)
     uuid = uuid_match.group(1).upper() if uuid_match else ""
 
-    # ★★★ UUID를 순번으로 변환 ★★★
-    display_name = UUID_MAP.get(uuid, "기타 컴퓨터")
+    # ★★★ UUID를 순번으로 변환, 없으면 원본 UUID를 그대로 사용 ★★★
+    display_name = UUID_MAP.get(uuid, uuid) if uuid else UUID_MAP.get("")
 
     status = None
     time_match = TIME_PATTERN.search(message_content)
@@ -160,7 +155,7 @@ def parse_and_update_status(message_content):
     if "__시작" in message_content: status = "시작"
     elif "__종료" in message_content: status = "종료"
     
-    if status:
+    if status and display_name:
         kst = timezone(timedelta(hours=9))
         timestamp = datetime.now(kst).isoformat()
         with status_lock:
@@ -174,10 +169,7 @@ def parse_and_update_status(message_content):
 @client.event
 async def on_ready():
     print(f'{client.user} (으)로 로그인했습니다.')
-    
-    # ★★★ 시작 시 컴퓨터 목록 초기화 ★★★
     initialize_statuses()
-    
     channel = client.get_channel(TARGET_CHANNEL_ID)
     if channel:
         print(f"'{channel.name}' 채널의 최근 1000개 메시지를 스캔합니다.")
