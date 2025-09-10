@@ -11,9 +11,9 @@ from datetime import datetime, timezone, timedelta
 DISCORD_TOKEN = os.environ.get('DISCORD_TOKEN')
 TARGET_CHANNEL_ID = int(os.environ.get('TARGET_CHANNEL_ID'))
 
-# ★★★ 사용자님이 제공해주신 정확하고 완전한 UUID 목록으로 교체 ★★★
+# ★★★ 쉼표 오류를 수정한 완전한 UUID 목록 ★★★
 UUID_MAP = {
-    "B6254D56-1931-8E9A-6F2C-C413BCA4F6CB": "1번 컴퓨터", "00F54D56-3471-F7DA-19A0-25962FD3EDD4": "2번 컴퓨터",
+    "B6254D56-1931-8E9A-6F2C-C413BCA4F6CB": "1번 컴퓨터", "00F54D56-3471-F7DA-19A0-2596FD3EDD4": "2번 컴퓨터",
     "698A4D56-6628-2370-1786-F01F6FB8E011": "3번 컴퓨터", "758B4D56-184F-DCCE-BA13-5125C618E676": "4번 컴퓨터",
     "DF1F4D56-5DC5-8F54-464D-64A208A271FA": "5번 컴퓨터", "C6144D56-3194-835A-DBC7-220B047B5C38": "6번 컴퓨터",
     "AD164D56-9697-F145-06F9-234427A81542": "7번 컴퓨터", "D65F4D56-1EF8-F9E0-4D09-5EAB7DD1FF23": "8번 컴퓨터",
@@ -119,7 +119,7 @@ UUID_MAP = {
     "2D6B4D56-FC68-6195-DE9C-6AD2B629B59E": "231번 컴퓨터", "88A34D56-E812-9F18-BA46-8F59CE4CF59C": "232번 컴퓨터",
     "34244D56-96BB-55F6-CEA1-D75FACC7E729": "233번 컴퓨터", "AB344D56-9A1F-005A-2DCD-A9CFD5DEE67B": "234번 컴퓨터",
     "6F544D56-2B92-1F01-86F4-AC02B3A075E5": "239번 컴퓨터",
-    "": "UUID 없음" # UUID가 비어있는 경우
+    "": "UUID 없음",
 }
 
 computer_statuses = {}
@@ -161,4 +161,47 @@ def parse_and_update_status(message_content):
         with status_lock:
             computer_statuses[display_name] = {
                 'status': status,
-                'log_timestamp': log_t
+                'log_timestamp': log_timestamp,
+                'last_update': server_check_time
+            }
+        print(f"[상태 업데이트] {display_name}, 상태: {status}, 로그일시: {log_timestamp}")
+
+@client.event
+async def on_ready():
+    print(f'{client.user} (으)로 로그인했습니다.')
+    initialize_statuses()
+    channel = client.get_channel(TARGET_CHANNEL_ID)
+    if channel:
+        print(f"'{channel.name}' 채널의 최근 1000개 메시지를 스캔합니다.")
+        messages = [message async for message in channel.history(limit=1000)]
+        for message in reversed(messages):
+            parse_and_update_status(message.content)
+        print("초기 상태 설정 완료.")
+
+@client.event
+async def on_message(message):
+    if message.author == client.user: return
+    if message.channel.id == TARGET_CHANNEL_ID:
+        parse_and_update_status(message.content)
+
+@app.route('/')
+def home():
+    return render_template('index.html')
+
+@app.route('/status')
+def get_statuses():
+    with status_lock:
+        return jsonify(computer_statuses)
+
+def run_flask():
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port)
+
+if __name__ == '__main__':
+    if not DISCORD_TOKEN or not TARGET_CHANNEL_ID:
+        print("오류: DISCORD_TOKEN 또는 TARGET_CHANNEL_ID 환경 변수가 설정되지 않았습니다.")
+    else:
+        flask_thread = threading.Thread(target=run_flask)
+        flask_thread.daemon = True
+        flask_thread.start()
+        client.run(DISCORD_TOKEN)
