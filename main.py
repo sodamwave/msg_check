@@ -136,14 +136,42 @@ status_lock = threading.Lock()
 app = Flask(__name__)
 
 def initialize_statuses():
-    for name in UUID_MAP.values():
-        if name not in computer_statuses:
-            computer_statuses[name] = { 'status': '최근 로그 없음', 'log_timestamp': '-', 'last_update': datetime.now(timezone(timedelta(hours=9))).isoformat() }
+    # 전체 관리할 컴퓨터 번호 범위를 설정합니다 (예: 1번부터 240번까지)
+    TOTAL_COMPUTERS = 240 
     
-    empty_uuid_numbers = [157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 170, 171, 172, 173, 174, 175, 176, 177, 178, 179, 180, 235, 236, 237, 238, 240]
-    for num in empty_uuid_numbers:
-        name = f"{num}번 컴퓨터"
-        computer_statuses[name] = { 'status': 'UUID 없음', 'log_timestamp': '-', 'last_update': datetime.now(timezone(timedelta(hours=9))).isoformat() }
+    # UUID_MAP에 등록된 컴퓨터 이름을 세트로 만들어 빠르게 조회할 수 있도록 합니다.
+    registered_names = set(UUID_MAP.values())
+
+    kst = timezone(timedelta(hours=9))
+    now_iso = datetime.now(kst).isoformat()
+
+    # 1번부터 TOTAL_COMPUTERS까지 모든 번호를 순회합니다.
+    for i in range(1, TOTAL_COMPUTERS + 1):
+        computer_name = f"{i}번 컴퓨터"
+
+        # UUID_MAP에 등록된 컴퓨터라면 '최근 로그 없음'으로 초기화
+        if computer_name in registered_names:
+            if computer_name not in computer_statuses: # 중복 초기화 방지
+                computer_statuses[computer_name] = {
+                    'status': '최근 로그 없음',
+                    'log_timestamp': '-',
+                    'last_update': now_iso
+                }
+        # UUID_MAP에 등록되지 않은 컴퓨터라면 'UUID 없음'으로 처리
+        else:
+            computer_statuses[computer_name] = {
+                'status': 'UUID 없음',
+                'log_timestamp': '-',
+                'last_update': now_iso
+            }
+            
+    # UUID_MAP 딕셔너리에 키가 빈 문자열("")인 경우 처리
+    if "" in UUID_MAP:
+        computer_statuses["UUID 없음"] = {
+            'status': '최근 로그 없음',
+            'log_timestamp': '-',
+            'last_update': now_iso
+        }
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -214,6 +242,7 @@ if __name__ == '__main__':
         flask_thread.daemon = True
         flask_thread.start()
         client.run(DISCORD_TOKEN)
+
 
 
 
