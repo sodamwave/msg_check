@@ -126,8 +126,7 @@ UUID_MAP = {
     "34244D56-96BB-55F6-CEA1-D75FACC7E729": "233번 컴퓨터", "AB344D56-9A1F-005A-2DCD-A9CFD5DEE67B": "234번 컴퓨터",
     "82914D56-5F10-8554-F102-39207EDC8D76": "235번 컴퓨터", "66CC4D56-9DD0-E3A8-1BB8-12421D74432F": "236번 컴퓨터",
     "E4604D56-D076-4C8E-A1AE-C6C4F142F2A6": "237번 컴퓨터", "F8EC4D56-1054-E789-AAAA-017B06A91F05": "238번 컴퓨터",
-    "6F544D56-2B92-1F01-86F4-AC02B3A075E5": "239번 컴퓨터", "D5A84D56-8B53-1026-891A-454A64FA10CD": "240번 컴퓨터",
-    "": "UUID 없음"
+    "6F544D56-2B92-1F01-86F4-AC02B3A075E5": "239번 컴퓨터", "D5A84D56-8B53-1026-891A-454A64FA10CD": "240번 컴퓨터"
 }
 
 
@@ -206,6 +205,7 @@ def parse_and_update_status(message_content):
 @client.event
 async def on_ready():
     print(f'{client.user} (으)로 로그인했습니다.')
+    initialize_statuses()
     channel = client.get_channel(TARGET_CHANNEL_ID)
     if channel:
         print(f"'{channel.name}' 채널의 최근 1000개 메시지를 스캔합니다.")
@@ -229,49 +229,15 @@ def get_statuses():
     with status_lock:
         return jsonify(computer_statuses)
 
-# --- 이 아래 부분을 완전히 교체합니다 ---
-
 def run_flask():
-    # Gunicorn 대신 Flask에 내장된 서버를 사용합니다.
-    # Render가 자동으로 포트를 할당해주므로 port 설정이 중요합니다.
-    port = int(os.environ.get('PORT', 10000))
+    port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
 
 if __name__ == '__main__':
-    print("==========================================")
-    print("===== 프로그램 실행 시작 (main.py) =====")
-    print("==========================================")
-    
-    # 1. 프로그램 시작 시 컴퓨터 목록 바로 초기화
-    initialize_statuses()
-    print(f"===== 컴퓨터 목록 초기화 완료! 총 {len(computer_statuses)}개 =====")
-
-    # 2. Flask 웹 서버를 백그라운드 스레드에서 시작
-    flask_thread = threading.Thread(target=run_flask)
-    flask_thread.daemon = True
-    flask_thread.start()
-    print("===== Flask 웹 서버 스레드 시작 완료 =====")
-
-    # 3. 메인 스레드에서 Discord 봇 실행 (이것이 프로그램의 메인 루프가 됩니다)
     if not DISCORD_TOKEN or not TARGET_CHANNEL_ID:
-        print("!!!!! 치명적 오류: Discord 토큰 또는 채널 ID가 없습니다. 봇을 실행할 수 없습니다.")
+        print("오류: DISCORD_TOKEN 또는 TARGET_CHANNEL_ID 환경 변수가 설정되지 않았습니다.")
     else:
-        print("===== Discord 봇 실행 시도... =====")
-        try:
-            client.run(DISCORD_TOKEN)
-        except discord.errors.LoginFailure:
-            print("!!!!! 치명적 오류: 잘못된 토큰입니다. Discord 봇 로그인을 실패했습니다.")
-        except Exception as e:
-            print(f"!!!!! 치명적 오류: Discord 봇 실행 중 알 수 없는 에러 발생: {e}")
-
-
-
-
-
-
-
-
-
-
-
-
+        flask_thread = threading.Thread(target=run_flask)
+        flask_thread.daemon = True
+        flask_thread.start()
+        client.run(DISCORD_TOKEN)
