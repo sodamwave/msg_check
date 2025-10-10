@@ -86,17 +86,17 @@
                     : info.log_timestamp;
 
                 // ### 수정 시작 ### : 카드 내용 변경
+                // fileName 정보가 유효할 때만 표시할 HTML 생성
+                const fileNameHtml = (info.fileName && info.fileName !== '-')
+                    ? `<div class="info"><b>${info.fileName}</b></div>`
+                    : '';
+
                 card.innerHTML = `
                     <div class="computer-name">${name}</div>
                     ${fileNameHtml}
                     <div class="info">상태: <span class="status">${info.status}</span></div>
                     <div class="info">로그 시간: <span class="time">${displayTime}</span></div>
                 `;
-				
-				// fileName 정보가 유효할 때만 표시할 HTML 생성
-                const fileNameHtml = (info.fileName && info.fileName !== '-')
-                    ? `<div class="info"><b>${info.fileName}</b></div>`
-                    : '';
                 // ### 수정 끝 ###
 
                 statusContainer.appendChild(card);
