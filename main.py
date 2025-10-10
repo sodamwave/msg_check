@@ -229,27 +229,34 @@ def get_statuses():
     with status_lock:
         return jsonify(computer_statuses)
 
-def run_flask():
-    port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port)
+# --- 이 아래 부분을 완전히 새로 바꿉니다 ---
 
-if __name__ == '__main__':
-    print("==========================================")
-    print("===== 프로그램 실행 시작 (main.py) =====") # <--- 추가 1
-    print("==========================================")
+# 1. 프로그램 시작 시 컴퓨터 목록 바로 초기화
+initialize_statuses()
+print(f"===== 컴퓨터 목록 초기화 완료! 총 {len(computer_statuses)}개 =====")
 
+# 2. 디스코드 봇을 별도의 스레드에서 실행할 함수 정의
+def run_discord_bot():
+    # 환경 변수가 제대로 설정되었는지 다시 한번 확인
     if not DISCORD_TOKEN or not TARGET_CHANNEL_ID:
-        print("오류: DISCORD_TOKEN 또는 TARGET_CHANNEL_ID 환경 변수가 설정되지 않았습니다.")
-    else:
-        initialize_statuses()
-        print(f"===== 컴퓨터 목록 초기화 완료! 총 {len(computer_statuses)}개 =====") # <--- 추가 2
-
-        flask_thread = threading.Thread(target=run_flask)
-        flask_thread.daemon = True
-        flask_thread.start()
-        
-        print("===== Discord 봇 실행 시도... =====") # <--- 추가 3
+        print("!!!!! 치명적 오류: Discord 토큰 또는 채널 ID가 없습니다. 봇을 실행할 수 없습니다.")
+        return # 함수 종료
+    
+    print("===== Discord 봇 실행 시도... =====")
+    try:
         client.run(DISCORD_TOKEN)
+    except discord.errors.LoginFailure:
+        print("!!!!! 치명적 오류: 잘못된 토큰입니다. Discord 봇 로그인을 실패했습니다.")
+    except Exception as e:
+        print(f"!!!!! 치명적 오류: Discord 봇 실행 중 알 수 없는 에러 발생: {e}")
+
+# 3. 디스코드 봇 스레드 시작
+discord_thread = threading.Thread(target=run_discord_bot)
+discord_thread.daemon = True # 메인 프로그램이 종료되면 같이 종료
+discord_thread.start()
+
+# if __name__ == '__main__': 블록은 Gunicorn과 함께 사용할 때 필요 없으므로 완전히 삭제합니다.
+
 
 
 
