@@ -206,7 +206,6 @@ def parse_and_update_status(message_content):
 @client.event
 async def on_ready():
     print(f'{client.user} (으)로 로그인했습니다.')
-    initialize_statuses()
     channel = client.get_channel(TARGET_CHANNEL_ID)
     if channel:
         print(f"'{channel.name}' 채널의 최근 1000개 메시지를 스캔합니다.")
@@ -238,10 +237,12 @@ if __name__ == '__main__':
     if not DISCORD_TOKEN or not TARGET_CHANNEL_ID:
         print("오류: DISCORD_TOKEN 또는 TARGET_CHANNEL_ID 환경 변수가 설정되지 않았습니다.")
     else:
+        initialize_statuses()
         flask_thread = threading.Thread(target=run_flask)
         flask_thread.daemon = True
         flask_thread.start()
         client.run(DISCORD_TOKEN)
+
 
 
 
