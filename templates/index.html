@@ -9,30 +9,31 @@
         body { font-family: 'Malgun Gothic', sans-serif; background-color: #f4f7f9; margin: 0; padding: 20px; }
         h1 { text-align: center; color: #333; }
 
-        /* ### 추가/수정된 CSS 시작 ### */
+        /* ### 컨트롤 패널 (현황판 + 버튼) ### */
         .control-panel {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            max-width: 960px; /* 전체적인 너비 제한 */
-            margin: 0 auto 25px auto; /* 중앙 정렬 */
+            max-width: 960px;
+            margin: 0 auto 25px auto;
             padding: 0 10px;
         }
 
         .status-summary {
             display: flex;
-            gap: 25px; /* 항목 간 간격 */
+            flex-wrap: nowrap; /* 모바일에서 줄바꿈 방지 */
+            gap: 20px;
         }
 
         .summary-item {
             display: flex;
-            flex-direction: column; /* 제목과 숫자를 세로로 배열 */
+            flex-direction: column;
             align-items: center;
             padding: 8px 12px;
             border-radius: 8px;
             cursor: pointer;
             transition: background-color 0.2s ease;
-            min-width: 80px; /* 최소 너비 고정 */
+            min-width: 65px; /* 너비 고정으로 간격 유지 */
             text-align: center;
         }
 
@@ -49,27 +50,48 @@
             font-size: 0.9em;
             color: #555;
             margin-bottom: 4px;
+            white-space: nowrap; /* 라벨 줄바꿈 방지 */
         }
 
         .summary-count {
-            font-size: 1.6em;
+            font-size: 1.5em;
             font-weight: bold;
             color: #333;
         }
 
-        /* 종료 상태 강조 */
         #summary-end .summary-count {
             color: #dc3545;
         }
-        /* ### 추가/수정된 CSS 끝 ### */
 
-        .sort-buttons { /* 기존 text-align:center 제거 */
-            display: flex; /* 버튼 정렬을 위해 추가 */
+        .sort-buttons {
+            display: flex;
             gap: 10px;
         }
-        .sort-buttons button { background-color: #fff; border: 1px solid #ccc; border-radius: 5px; padding: 8px 16px; margin: 0; cursor: pointer; font-size: 1em; transition: all 0.2s ease; }
+        .sort-buttons button { background-color: #fff; border: 1px solid #ccc; border-radius: 5px; padding: 8px 16px; margin: 0; cursor: pointer; font-size: 1em; transition: all 0.2s ease; white-space: nowrap; }
         .sort-buttons button.active { background-color: #007bff; color: white; border-color: #007bff; }
-
+        
+        /* ### 모바일 반응형 CSS ### */
+        @media (max-width: 768px) {
+            .control-panel {
+                flex-direction: column; /* 세로로 쌓기 */
+                gap: 20px; /* 현황판과 버튼 사이 간격 */
+            }
+            .status-summary {
+                gap: 10px; /* 모바일에서 항목 간 간격 줄이기 */
+                justify-content: center;
+                width: 100%;
+                overflow-x: auto; /* 혹시 넘칠 경우 스크롤 */
+            }
+            .summary-item {
+                min-width: 60px; /* 최소 너비 줄이기 */
+                padding: 6px 5px;
+            }
+            .summary-count {
+                font-size: 1.3em;
+            }
+        }
+        
+        /* ### 카드 스타일 (기존과 동일) ### */
         #status-container { display: flex; flex-wrap: wrap; gap: 15px; justify-content: center; }
         .status-card { background-color: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); padding: 15px; width: 250px; border-left: 5px solid #ccc; transition: all 0.3s ease; }
         .status-card .computer-name { font-weight: bold; font-size: 1.2em; color: #333; margin-bottom: 10px; word-break: break-all; }
@@ -107,6 +129,10 @@
                 <span class="summary-label">UUID 없음</span>
                 <span class="summary-count" id="count-no-uuid">0</span>
             </div>
+            <div class="summary-item" id="summary-total"> <!-- data-status-filter 없음 -->
+                <span class="summary-label">전체</span>
+                <span class="summary-count" id="count-total">0</span>
+            </div>
         </div>
         <div class="sort-buttons">
             <button id="sort-by-time" class="active">시간 정렬</button>
@@ -121,31 +147,23 @@
         const apiUrl = '/status';
         const statusContainer = document.getElementById('status-container');
         const sortButtons = document.querySelectorAll('.sort-buttons button');
-        // ### JS 추가 시작 ###
-        const summaryItems = document.querySelectorAll('.summary-item');
-        // ### JS 추가 끝 ###
+        const summaryFilterItems = document.querySelectorAll('.summary-item[data-status-filter]');
+        const summaryTotalItem = document.getElementById('summary-total');
 
         let allStatuses = [];
         let currentSort = 'time';
-        // ### JS 추가 시작 ###
-        let currentFilter = 'all'; // 'all' 또는 '시작', '종료' 등
-        // ### JS 추가 끝 ###
+        let currentFilter = 'all';
 
-        // ### JS 수정 시작 ###
         function updateSummaryCounts() {
-            const counts = {
-                '시작': 0,
-                '종료': 0,
-                '최근 로그 없음': 0,
-                'UUID 없음': 0
-            };
+            const counts = { '시작': 0, '종료': 0, '최근 로그 없음': 0, 'UUID 없음': 0 };
+            let totalCount = 0;
 
             allStatuses.forEach(([name, info]) => {
-                // '컴퓨터'로 끝나는 데이터만 카운트에 포함
                 if (name.endsWith('컴퓨터')) {
                     if (info.status in counts) {
                         counts[info.status]++;
                     }
+                    totalCount++;
                 }
             });
 
@@ -153,41 +171,31 @@
             document.getElementById('count-end').textContent = counts['종료'];
             document.getElementById('count-unknown').textContent = counts['최근 로그 없음'];
             document.getElementById('count-no-uuid').textContent = counts['UUID 없음'];
+            document.getElementById('count-total').textContent = totalCount;
         }
-        // ### JS 수정 끝 ###
-
 
         function renderStatuses() {
-            // ### JS 수정 시작: 필터링 로직 추가 ###
             updateSummaryCounts();
+            let filteredData = (currentFilter === 'all')
+                ? allStatuses
+                : allStatuses.filter(([name, info]) => info.status === currentFilter);
 
-            let filteredData = allStatuses;
-            if (currentFilter !== 'all') {
-                filteredData = allStatuses.filter(([name, info]) => info.status === currentFilter);
-            }
-            // ### JS 수정 끝 ###
-
-            // 정렬 로직은 filteredData를 기준으로 수행
             let sortedData = [...filteredData];
             sortedData.sort(([keyA, a], [keyB, b]) => {
                 const isNumberedA = keyA.endsWith('컴퓨터');
                 const isNumberedB = keyB.endsWith('컴퓨터');
-
                 if (isNumberedA && !isNumberedB) return -1;
                 if (!isNumberedA && isNumberedB) return 1;
-
                 if (currentSort === 'number') {
                     const numA = parseInt(keyA) || 9999;
                     const numB = parseInt(keyB) || 9999;
                     return numA - numB;
-                } 
-                else if (currentSort === 'status') {
+                } else if (currentSort === 'status') {
                     const statusOrder = { '종료': 1, '시작': 2, '최근 로그 없음': 3, 'UUID 없음': 4 };
                     const orderA = statusOrder[a.status] || 5;
                     const orderB = statusOrder[b.status] || 5;
                     return orderA - orderB;
-                }
-                else if (currentSort === 'time') {
+                } else if (currentSort === 'time') {
                     return (b.log_timestamp || '').localeCompare(a.log_timestamp || '');
                 }
                 return 0;
@@ -197,20 +205,12 @@
             sortedData.forEach(([name, info]) => {
                 const card = document.createElement('div');
                 card.classList.add('status-card');
-                
                 if (info.status === '시작') card.classList.add('start');
                 else if (info.status === '종료') card.classList.add('end');
                 else if (info.status === 'UUID 없음') card.classList.add('no-uuid');
                 else card.classList.add('unknown');
-                
-                const displayTime = info.log_timestamp.includes(' ') 
-                    ? info.log_timestamp.split(' ')[1] 
-                    : info.log_timestamp;
-
-                const fileNameHtml = (info.fileName && info.fileName !== '-')
-                    ? `<div class="info"><b>${info.fileName}</b></div>`
-                    : '';
-
+                const displayTime = info.log_timestamp.includes(' ') ? info.log_timestamp.split(' ')[1] : info.log_timestamp;
+                const fileNameHtml = (info.fileName && info.fileName !== '-') ? `<div class="info"><b>${info.fileName}</b></div>` : '';
                 card.innerHTML = `
                     <div class="computer-name">${name}</div>
                     <div class="info">상태: <span class="status">${info.status}</span></div>
@@ -243,24 +243,28 @@
             });
         });
 
-        // ### JS 추가 시작: 필터 클릭 이벤트 ###
-        summaryItems.forEach(item => {
+        // ### 필터 클릭 이벤트 수정 ###
+        summaryFilterItems.forEach(item => {
             item.addEventListener('click', () => {
                 const filter = item.dataset.statusFilter;
-
-                // 이미 활성화된 필터를 다시 클릭하면 필터 해제
                 if (currentFilter === filter) {
                     currentFilter = 'all';
                     item.classList.remove('active');
                 } else {
                     currentFilter = filter;
-                    summaryItems.forEach(i => i.classList.remove('active'));
+                    summaryFilterItems.forEach(i => i.classList.remove('active'));
                     item.classList.add('active');
                 }
                 renderStatuses();
             });
         });
-        // ### JS 추가 끝 ###
+
+        // '전체' 버튼 클릭 시 모든 필터 해제
+        summaryTotalItem.addEventListener('click', () => {
+            currentFilter = 'all';
+            summaryFilterItems.forEach(i => i.classList.remove('active'));
+            renderStatuses();
+        });
 
         setInterval(fetchStatus, 5000);
         fetchStatus();
