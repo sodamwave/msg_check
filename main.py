@@ -234,14 +234,23 @@ def run_flask():
     app.run(host='0.0.0.0', port=port)
 
 if __name__ == '__main__':
+    print("==========================================")
+    print("===== 프로그램 실행 시작 (main.py) =====") # <--- 추가 1
+    print("==========================================")
+
     if not DISCORD_TOKEN or not TARGET_CHANNEL_ID:
         print("오류: DISCORD_TOKEN 또는 TARGET_CHANNEL_ID 환경 변수가 설정되지 않았습니다.")
     else:
         initialize_statuses()
+        print(f"===== 컴퓨터 목록 초기화 완료! 총 {len(computer_statuses)}개 =====") # <--- 추가 2
+
         flask_thread = threading.Thread(target=run_flask)
         flask_thread.daemon = True
         flask_thread.start()
+        
+        print("===== Discord 봇 실행 시도... =====") # <--- 추가 3
         client.run(DISCORD_TOKEN)
+
 
 
 
