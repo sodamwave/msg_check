@@ -21,7 +21,7 @@
 
         .status-summary {
             display: flex;
-            flex-wrap: nowrap; /* 모바일에서 줄바꿈 방지 */
+            flex-wrap: nowrap;
             gap: 20px;
         }
 
@@ -33,7 +33,7 @@
             border-radius: 8px;
             cursor: pointer;
             transition: background-color 0.2s ease;
-            min-width: 65px; /* 너비 고정으로 간격 유지 */
+            min-width: 65px;
             text-align: center;
         }
 
@@ -50,7 +50,7 @@
             font-size: 0.9em;
             color: #555;
             margin-bottom: 4px;
-            white-space: nowrap; /* 라벨 줄바꿈 방지 */
+            white-space: nowrap;
         }
 
         .summary-count {
@@ -70,20 +70,24 @@
         .sort-buttons button { background-color: #fff; border: 1px solid #ccc; border-radius: 5px; padding: 8px 16px; margin: 0; cursor: pointer; font-size: 1em; transition: all 0.2s ease; white-space: nowrap; }
         .sort-buttons button.active { background-color: #007bff; color: white; border-color: #007bff; }
         
-        /* ### 모바일 반응형 CSS ### */
+        /* ### 모바일 반응형 CSS 수정 ### */
         @media (max-width: 768px) {
             .control-panel {
-                flex-direction: column; /* 세로로 쌓기 */
-                gap: 20px; /* 현황판과 버튼 사이 간격 */
+                flex-direction: column;
+                gap: 20px;
+                padding: 0; /* 부모 패딩은 제거 */
             }
             .status-summary {
-                gap: 10px; /* 모바일에서 항목 간 간격 줄이기 */
-                justify-content: center;
+                gap: 0; /* gap 대신 space-between으로 간격 조절 */
+                justify-content: space-between; /* 항목들을 균등하게 배분 */
                 width: 100%;
-                overflow-x: auto; /* 혹시 넘칠 경우 스크롤 */
+                
+                /* === 핵심 수정 사항 === */
+                padding: 0 5px; /* 좌우 여백 추가하여 잘림 방지 */
+                box-sizing: border-box; /* 패딩을 너비에 포함 */
             }
             .summary-item {
-                min-width: 60px; /* 최소 너비 줄이기 */
+                min-width: auto; /* 최소 너비 자동 조절 */
                 padding: 6px 5px;
             }
             .summary-count {
@@ -110,7 +114,6 @@
 <body>
     <h1>컴퓨터 실시간 모니터링</h1>
 
-    <!-- ### HTML 구조 변경 ### -->
     <div class="control-panel">
         <div class="status-summary">
             <div class="summary-item" id="summary-start" data-status-filter="시작">
@@ -129,7 +132,7 @@
                 <span class="summary-label">UUID 없음</span>
                 <span class="summary-count" id="count-no-uuid">0</span>
             </div>
-            <div class="summary-item" id="summary-total"> <!-- data-status-filter 없음 -->
+            <div class="summary-item" id="summary-total">
                 <span class="summary-label">전체</span>
                 <span class="summary-count" id="count-total">0</span>
             </div>
@@ -143,6 +146,7 @@
     
     <div id="status-container"></div>
 
+    <!-- 스크립트 부분은 이전과 동일하므로 변경하지 않았습니다. -->
     <script>
         const apiUrl = '/status';
         const statusContainer = document.getElementById('status-container');
@@ -243,7 +247,6 @@
             });
         });
 
-        // ### 필터 클릭 이벤트 수정 ###
         summaryFilterItems.forEach(item => {
             item.addEventListener('click', () => {
                 const filter = item.dataset.statusFilter;
@@ -259,7 +262,6 @@
             });
         });
 
-        // '전체' 버튼 클릭 시 모든 필터 해제
         summaryTotalItem.addEventListener('click', () => {
             currentFilter = 'all';
             summaryFilterItems.forEach(i => i.classList.remove('active'));
