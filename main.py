@@ -1,3 +1,5 @@
+# main.py
+
 import discord
 import os
 import re
@@ -135,41 +137,38 @@ status_lock = threading.Lock()
 app = Flask(__name__)
 
 def initialize_statuses():
-    # 전체 관리할 컴퓨터 번호 범위를 설정합니다 (예: 1번부터 240번까지)
-    TOTAL_COMPUTERS = 240 
-    
-    # UUID_MAP에 등록된 컴퓨터 이름을 세트로 만들어 빠르게 조회할 수 있도록 합니다.
+    TOTAL_COMPUTERS = 240
     registered_names = set(UUID_MAP.values())
-
     kst = timezone(timedelta(hours=9))
     now_iso = datetime.now(kst).isoformat()
 
-    # 1번부터 TOTAL_COMPUTERS까지 모든 번호를 순회합니다.
     for i in range(1, TOTAL_COMPUTERS + 1):
         computer_name = f"{i}번 컴퓨터"
+        
+        # ### 수정 시작 ### : fileName 필드 추가
+        initial_data = {
+            'log_timestamp': '-',
+            'last_update': now_iso,
+            'fileName': '-'  # 파일 이름 필드 초기화
+        }
+        # ### 수정 끝 ###
 
-        # UUID_MAP에 등록된 컴퓨터라면 '최근 로그 없음'으로 초기화
         if computer_name in registered_names:
-            if computer_name not in computer_statuses: # 중복 초기화 방지
+            if computer_name not in computer_statuses:
                 computer_statuses[computer_name] = {
                     'status': '최근 로그 없음',
-                    'log_timestamp': '-',
-                    'last_update': now_iso
+                    **initial_data
                 }
-        # UUID_MAP에 등록되지 않은 컴퓨터라면 'UUID 없음'으로 처리
         else:
             computer_statuses[computer_name] = {
                 'status': 'UUID 없음',
-                'log_timestamp': '-',
-                'last_update': now_iso
+                **initial_data
             }
             
-    # UUID_MAP 딕셔너리에 키가 빈 문자열("")인 경우 처리
     if "" in UUID_MAP:
         computer_statuses["UUID 없음"] = {
             'status': '최근 로그 없음',
-            'log_timestamp': '-',
-            'last_update': now_iso
+            **initial_data
         }
 
 intents = discord.Intents.default()
@@ -190,17 +189,32 @@ def parse_and_update_status(message_content):
 
     if "__시작" in message_content: status = "시작"
     elif "__종료" in message_content: status = "종료"
+
+    # ### 수정 시작 ### : 파일 이름 추출 로직 추가
+    file_name = "-"
+    if uuid_match:
+        # UUID 앞부분의 문자열을 가져옴
+        pre_uuid_str = message_content.split(uuid)[0]
+        # 타임스탬프 '] ' 뒷부분을 가져옴
+        if ']' in pre_uuid_str:
+            raw_name_part = pre_uuid_str.split(']', 1)[1].strip()
+            # '_V' 로 시작하는 버전 정보를 제거
+            file_name = re.split(r'_V\d', raw_name_part)[0].strip('_')
+    # ### 수정 끝 ###
     
     if status and display_name:
         kst = timezone(timedelta(hours=9))
         server_check_time = datetime.now(kst).isoformat()
         with status_lock:
+            # ### 수정 시작 ### : computer_statuses에 fileName 추가
             computer_statuses[display_name] = {
                 'status': status,
                 'log_timestamp': log_timestamp,
-                'last_update': server_check_time
+                'last_update': server_check_time,
+                'fileName': file_name 
             }
-        print(f"[상태 업데이트] {display_name}, 상태: {status}, 로그일시: {log_timestamp}")
+            # ### 수정 끝 ###
+        print(f"[상태 업데이트] {display_name}, 상태: {status}, 파일: {file_name}, 로그일시: {log_timestamp}")
 
 @client.event
 async def on_ready():
